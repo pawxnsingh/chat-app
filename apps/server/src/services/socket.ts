@@ -1,6 +1,7 @@
 import { WebSocketServer } from "ws";
 import Redis from "ioredis";
 import http from "http";
+import { produceMessage } from "./kafka";
 
 // here we need two connection with redis one for publishing and one for subscribing
 // so we need to create two instances of redis
@@ -30,14 +31,20 @@ class SocketService {
     });
 
     // subscribing the messages from the redis
-    sub.on("message", (channel, message) => {
+    sub.on("message", async (channel, message) => {
       console.log(`Recieved message from channel ${channel}: ${message}`);
-      // broadcast the message to all connected Websocket clients
-      this._wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(message);
-        }
-      });
+
+      if (channel === "MESSAGES") {
+        // broadcast the message to all connected Websocket clients
+        this._wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+          }
+        });
+        // we will push this message to the kafka
+        await produceMessage(message);
+        console.log("messages produced to the kafka broker");
+      }
     });
   }
 

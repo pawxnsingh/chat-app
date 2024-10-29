@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id              String          @id @default(uuid())
+  name            String
+  about           String
+  phone_number    Int
+  username        String          @unique
+  email           String          @unique
+  password_hash   String
+  profile_picture String
+  public_key      String          @unique
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  Groups          Groups[]
+  Group_members   Group_members[]
+}
+
+model Groups {
+  id            String          @id @default(uuid())
+  name          String
+  created_by    String
+  user          Users           @relation(fields: [created_by], references: [id])
+  created_at    DateTime        @default(now())
+  Group_members Group_members[]
+}
+
+model Group_members {
+  group_id String
+  user_id  String
+  role     ROLE   @default(MEMBER)
+  group    Groups @relation(fields: [group_id], references: [id])
+  user     Users  @relation(fields: [user_id], references: [id])
+
+  @@id([group_id, user_id])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("messages")
+}
+
+model Messages {
+  id                String       @id @default(uuid())
+  sender_id         String
+  recipient_id      String
+  group_id          String?
+  message_type      MESSAGE_TYPE @default(TEXT)
+  encrypted_content String
+  is_delivered      Boolean      @default(false)
+  is_read           Boolean      @default(false)
+  created_at        DateTime     @default(now())
+}
+
+enum ROLE {
+  ADMIN
+  MEMBER
+}
+
+enum MESSAGE_TYPE {
+  TEXT
+  FILE
+  MEDIA
+}
